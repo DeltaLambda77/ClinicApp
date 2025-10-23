@@ -1,0 +1,7 @@
+com\example\clinicapplication\models\Trial.class
+com\example\clinicapplication\ClinicApp.class
+com\ClinicApplication\controller\HelloController.class
+com\example\clinicapplication\models\Condition.class
+com\example\clinicapplication\models\Patient.class
+com\example\clinicapplication\models\TrialRequirement.class
+com\example\clinicapplication\models\Medication.class
