@@ -1,5 +1,7 @@
 D:\School\Semester 7\Database Management\Project\ClinicApp\ClinicApp\Backend\ClinicApp\src\main\java\com\example\clinicapplication\ClinicApp.java
 D:\School\Semester 7\Database Management\Project\ClinicApp\ClinicApp\Backend\ClinicApp\src\main\java\com\example\clinicapplication\controllers\PatientController.java
+D:\School\Semester 7\Database Management\Project\ClinicApp\ClinicApp\Backend\ClinicApp\src\main\java\com\example\clinicapplication\CorsConfig.java
+D:\School\Semester 7\Database Management\Project\ClinicApp\ClinicApp\Backend\ClinicApp\src\main\java\com\example\clinicapplication\dto\PatientDTO.java
 D:\School\Semester 7\Database Management\Project\ClinicApp\ClinicApp\Backend\ClinicApp\src\main\java\com\example\clinicapplication\models\Condition.java
 D:\School\Semester 7\Database Management\Project\ClinicApp\ClinicApp\Backend\ClinicApp\src\main\java\com\example\clinicapplication\models\Medication.java
 D:\School\Semester 7\Database Management\Project\ClinicApp\ClinicApp\Backend\ClinicApp\src\main\java\com\example\clinicapplication\models\Patient.java

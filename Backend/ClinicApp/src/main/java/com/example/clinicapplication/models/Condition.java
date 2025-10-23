@@ -1,5 +1,6 @@
 package com.example.clinicapplication.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import java.util.HashSet;
@@ -20,6 +21,7 @@ public class Condition {
     private String description;
 
     @OneToMany(mappedBy = "condition", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore  // Don't serialize this to avoid circular references
     private Set<PatientCondition> patientConditions = new HashSet<>();
 
     public String getName() {

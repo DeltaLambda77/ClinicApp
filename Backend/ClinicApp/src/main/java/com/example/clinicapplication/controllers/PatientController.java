@@ -1,7 +1,7 @@
 package com.example.clinicapplication.controllers;
 
+import com.example.clinicapplication.dto.PatientDTO;
 import com.example.clinicapplication.models.Patient;
-import com.example.clinicapplication.models.Trial;
 import com.example.clinicapplication.services.PatientService;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -16,17 +16,24 @@ public class PatientController {
     }
 
     @GetMapping
-    public List<Patient> getAllPatients() {
-        return patientService.getAllPatients();
+    public List<PatientDTO> getAllPatients() {
+        System.out.println("GET /api/patients called");
+        List<PatientDTO> patients = patientService.getAllPatients();
+        System.out.println("Returning " + patients.size() + " patients");
+        return patients;
     }
 
     @PostMapping
-    public Patient addPatient(@RequestBody Patient patient) {
-        return patientService.addPatient(patient);
+    public PatientDTO addPatient(@RequestBody Patient patient) {
+        System.out.println("POST /api/patients called");
+        System.out.println("Received: " + patient.getFirstName() + " " + patient.getLastName());
+        PatientDTO saved = patientService.addPatient(patient);
+        System.out.println("Saved with ID: " + saved.getPatientId());
+        return saved;
     }
 
-    @GetMapping("/eligible/{trialId}")
-    public List<Patient> findEligiblePatients(@PathVariable Long trialId) {
-        return List.of();
+    @GetMapping("/count")
+    public String countPatients() {
+        return "Total patients: " + patientService.getAllPatients().size();
     }
 }

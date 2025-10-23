@@ -1,5 +1,6 @@
 package com.example.clinicapplication.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -18,6 +19,7 @@ public class PatientCondition {
     @ManyToOne
     @MapsId("patientId")
     @JoinColumn(name = "patient_id")
+    @JsonIgnore  // Ignore to prevent circular reference
     private Patient patient;
 
     @ManyToOne

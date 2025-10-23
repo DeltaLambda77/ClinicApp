@@ -1,5 +1,6 @@
 package com.example.clinicapplication.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -21,6 +22,7 @@ public class Medication {
     private String dosage;
 
     @ManyToMany(mappedBy = "medications")
+    @JsonIgnore
     private Set<Patient> patients = new HashSet<>();
 
     @OneToMany(mappedBy = "excludedMedication")

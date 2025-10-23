@@ -1,5 +1,5 @@
 <?php
-include 'connection.php';
+include 'api_config.php';
 
 $selected_trial = $_GET['trial'] ?? null;
 
@@ -8,49 +8,39 @@ if (!$selected_trial) {
     exit;
 }
 
-// Fetch eligible patients (age-based)
-$sql = "SELECT DISTINCT
-            p.PatientID,
-            CONCAT(p.FirstName, ' ', p.LastName) AS PatientName,
-            TIMESTAMPDIFF(YEAR, p.DateOfBirth, CURDATE()) AS Age,
-            t.MinimumAge,
-            t.MaximumAge
-        FROM Patient p
-        CROSS JOIN Trial t
-        WHERE t.TrialID = ?
-          AND TIMESTAMPDIFF(YEAR, p.DateOfBirth, CURDATE()) 
-              BETWEEN t.MinimumAge AND t.MaximumAge
-        ORDER BY p.LastName, p.FirstName";
+// Call API to get eligible patients for this trial
+$response = callAPI('GET', '/trials/' . $selected_trial . '/eligible-patients');
 
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $selected_trial);
-$stmt->execute();
-$result = $stmt->get_result();
-$patients = $result->fetch_all(MYSQLI_ASSOC);
-
-if (count($patients) == 0) {
-    echo "<p>No patients meet the age criteria for this trial.</p>";
+if ($response['status'] != 200 || empty($response['data'])) {
+    echo "<p>No patients meet the criteria for this trial.</p>";
     exit;
 }
 
+$patients = $response['data'];
+
 // Build HTML table
-echo "<h2>Eligible Patients (Age-Based)</h2>";
+echo "<h2>Eligible Patients</h2>";
 echo "<table>
         <tr>
             <th>Patient ID</th>
             <th>Patient Name</th>
             <th>Age</th>
-            <th>Trial Age Range</th>
             <th>Status</th>
         </tr>";
+
 foreach($patients as $p) {
+    $dob = new DateTime($p['dateOfBirth']);
+    $now = new DateTime();
+    $age = $now->diff($dob)->y;
+    $name = $p['firstName'] . ' ' . $p['lastName'];
+    
     echo "<tr class='eligible'>
-            <td>{$p['PatientID']}</td>
-            <td>{$p['PatientName']}</td>
-            <td>{$p['Age']}</td>
-            <td>{$p['MinimumAge']}-{$p['MaximumAge']}</td>
+            <td>{$p['patientId']}</td>
+            <td>" . htmlspecialchars($name) . "</td>
+            <td>$age</td>
             <td>✓ Eligible</td>
           </tr>";
 }
+
 echo "</table>";
 ?>

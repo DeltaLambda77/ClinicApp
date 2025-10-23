@@ -1,5 +1,6 @@
 package com.example.clinicapplication.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -24,7 +25,21 @@ public class Patient {
     private String sex;
     private String contactInfo;
 
+    public String getFirstName() { return firstName; }
+
+    public String getLastName() { return lastName; }
+
+    public LocalDate getDateOfBirth() { return dateOfBirth; }
+
+    public String getSex() { return sex; }
+
+    public String getContactInfo() { return contactInfo; }
+
+    public Long getPatientId() { return patientId; }
+
+
     @OneToMany(mappedBy = "patient", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private Set<PatientCondition> patientConditions = new HashSet<>();
 
     @ManyToMany
@@ -33,5 +48,6 @@ public class Patient {
             joinColumns = @JoinColumn(name = "patient_id"),
             inverseJoinColumns = @JoinColumn(name = "medication_id")
     )
+    @JsonIgnore
     private Set<Medication> medications = new HashSet<>();
 }

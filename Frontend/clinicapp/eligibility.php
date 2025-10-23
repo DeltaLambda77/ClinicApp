@@ -1,11 +1,19 @@
 <?php
-include 'connection.php';
+include 'api_config.php';
 
 // Get all trials for the dropdown
-$trials_stmt = $conn->query("SELECT TrialID, Title FROM Trial ORDER BY Title");
-$trials = $trials_stmt->fetch_all(MYSQLI_ASSOC);
-?>
+$response = callAPI('GET', '/trials');
+$trials = [];
 
+if ($response['status'] == 200 && $response['data']) {
+    foreach ($response['data'] as $trial) {
+        $trials[] = [
+            'TrialID' => $trial['trialId'],
+            'Title' => $trial['title']
+        ];
+    }
+}
+?>
 <!DOCTYPE html>
 <html>
 <head>
@@ -22,38 +30,37 @@ $trials = $trials_stmt->fetch_all(MYSQLI_ASSOC);
 <body>
     <h1>Check Trial Eligibility</h1>
     <a href="index.php">← Back to Home</a>
-
+    
     <label>Select Trial:</label>
     <select id="trialSelect">
         <option value="">-- Select a Trial --</option>
         <?php foreach($trials as $trial): ?>
-            <option value="<?= $trial['TrialID'] ?>"><?= $trial['Title'] ?></option>
+            <option value="<?= htmlspecialchars($trial['TrialID']) ?>">
+                <?= htmlspecialchars($trial['Title']) ?>
+            </option>
         <?php endforeach; ?>
     </select>
-
+    
     <div id="eligibilityResults"></div>
-
+    
     <script>
     document.getElementById('trialSelect').addEventListener('change', function() {
         const trialId = this.value;
         const resultsDiv = document.getElementById('eligibilityResults');
-
+        
         if (trialId === "") {
-            resultsDiv.innerHTML = ""; // clear table if no trial selected
+            resultsDiv.innerHTML = "";
             return;
         }
-
-        // AJAX request
-        const xhr = new XMLHttpRequest();
-        xhr.open("GET", "fetch_eligibility.php?trial=" + trialId, true);
-        xhr.onload = function() {
-            if (xhr.status === 200) {
-                resultsDiv.innerHTML = xhr.responseText;
-            } else {
+        
+        fetch('fetch_eligibility.php?trial=' + trialId)
+            .then(response => response.text())
+            .then(data => {
+                resultsDiv.innerHTML = data;
+            })
+            .catch(error => {
                 resultsDiv.innerHTML = "Error fetching data.";
-            }
-        };
-        xhr.send();
+            });
     });
     </script>
 </body>

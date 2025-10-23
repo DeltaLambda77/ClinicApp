@@ -1,21 +1,37 @@
 <?php
-include('connection.php');
+include('api_config.php');
 
-$sql = "SELECT PatientID, CONCAT(FirstName, ' ', LastName) AS Name, 
-        TIMESTAMPDIFF(YEAR, DateOfBirth, CURDATE()) AS Age, Sex, ContactInfo
-        FROM Patient
-        ORDER BY LastName, FirstName";
+$response = callAPI('GET', '/patients');
 
-$result = $conn->query($sql);
+echo "<pre>";
+echo "Status Code: " . $response['status'] . "\n";
+echo "Response Data:\n";
+print_r($response['data']);
+echo "</pre>";
 
 $patients = [];
-if ($result->num_rows > 0) {
-    while($row = $result->fetch_assoc()) {
-        $patients[] = $row;
+
+if ($response['status'] == 200 && $response['data']) {
+    foreach ($response['data'] as $patient) {
+
+        if (!isset($patient['dateOfBirth']) || !isset($patient['patientId'])) {
+            continue;
+        }
+        
+        $dob = new DateTime($patient['dateOfBirth']);
+        $now = new DateTime();
+        $age = $now->diff($dob)->y;
+        
+        $patients[] = [
+            'PatientID' => $patient['patientId'],
+            'Name' => ($patient['firstName'] ?? '') . ' ' . ($patient['lastName'] ?? ''),
+            'Age' => $age,
+            'Sex' => $patient['sex'] ?? '',
+            'ContactInfo' => $patient['contactInfo'] ?? ''
+        ];
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -26,18 +42,18 @@ if ($result->num_rows > 0) {
 </head>
 <body>
     <header>View Patients</header>
-
     <nav>
         <a href="index.php">Home</a>
         <a href="patients.php">View Patients</a>
         <a href="add_patient.php">Add Patient</a>
         <a href="eligibility.php">Check Eligibility</a>
     </nav>
-
     <main>
         <h2>Patient List</h2>
-
         
+        <?php if (empty($patients)): ?>
+            <p>No patients found.</p>
+        <?php else: ?>
         <table>
             <tr>
                 <th>ID</th>
@@ -48,14 +64,15 @@ if ($result->num_rows > 0) {
             </tr>
             <?php foreach ($patients as $p): ?>
             <tr>
-                <td><?= $p['PatientID'] ?></td>
-                <td><?= $p['Name'] ?></td>
-                <td><?= $p['Age'] ?></td>
-                <td><?= $p['Sex'] ?></td>
-                <td><?= $p['ContactInfo'] ?></td>
+                <td><?= htmlspecialchars($p['PatientID']) ?></td>
+                <td><?= htmlspecialchars($p['Name']) ?></td>
+                <td><?= htmlspecialchars($p['Age']) ?></td>
+                <td><?= htmlspecialchars($p['Sex']) ?></td>
+                <td><?= htmlspecialchars($p['ContactInfo']) ?></td>
             </tr>
             <?php endforeach; ?>
         </table>
+        <?php endif; ?>
     </main>
 </body>
 </html>
