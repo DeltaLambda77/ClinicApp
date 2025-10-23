@@ -9,10 +9,8 @@ import java.util.List;
 @Repository
 public interface PatientRepository extends JpaRepository<Patient, Integer> {
 
-    // Find by last name
     List<Patient> findByLastName(String lastName);
 
-    // Custom SQL example: find patients by condition
     @Query(value = """
         SELECT p.* FROM Patient p
         JOIN PatientCondition pc ON p.PatientID = pc.PatientID

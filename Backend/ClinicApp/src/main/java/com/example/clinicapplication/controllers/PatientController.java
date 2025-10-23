@@ -27,7 +27,6 @@ public class PatientController {
 
     @GetMapping("/eligible/{trialId}")
     public List<Patient> findEligiblePatients(@PathVariable Long trialId) {
-        // TODO: Fetch trial from repository and pass to service
         return List.of();
     }
 }

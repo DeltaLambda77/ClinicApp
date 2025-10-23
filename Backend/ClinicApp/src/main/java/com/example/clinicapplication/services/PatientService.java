@@ -22,9 +22,7 @@ public class PatientService {
         return patientRepository.save(patient);
     }
 
-    // Placeholder: implement eligibility query later
     public List<Patient> findEligiblePatients(Trial trial) {
-        // TODO: implement eligibility logic using JPA or native SQL
         return List.of();
     }
 }
