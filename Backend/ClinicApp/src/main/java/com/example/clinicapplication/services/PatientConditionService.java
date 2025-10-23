@@ -20,7 +20,7 @@ public class PatientConditionService {
         return patientConditionRepository.findAll();
     }
 
-    public Optional<PatientCondition> getPatientConditionByIds(int patientId, int conditionId) {
+    public Optional<PatientCondition> getPatientConditionByIds(long patientId, long conditionId) {
         return patientConditionRepository.findByPatientIdAndConditionId(patientId, conditionId);
     }
 
@@ -28,7 +28,7 @@ public class PatientConditionService {
         return patientConditionRepository.save(pc);
     }
 
-    public void deletePatientCondition(int patientId, int conditionId) {
+    public void deletePatientCondition(long patientId, long conditionId) {
         patientConditionRepository.deleteByPatientIdAndConditionId(patientId, conditionId);
     }
 }

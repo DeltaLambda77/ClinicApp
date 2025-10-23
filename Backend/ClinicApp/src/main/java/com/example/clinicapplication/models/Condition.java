@@ -2,17 +2,15 @@ package com.example.clinicapplication.models;
 
 import jakarta.persistence.*;
 import lombok.*;
-
 import java.util.HashSet;
 import java.util.Set;
 
 @Entity
+@Table(name = "condition")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class Condition {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long conditionId;
@@ -21,6 +19,30 @@ public class Condition {
     private String code;
     private String description;
 
-    @ManyToMany(mappedBy = "conditions")
-    private Set<Patient> patients = new HashSet<>();
+    @OneToMany(mappedBy = "condition", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<PatientCondition> patientConditions = new HashSet<>();
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getCode() {
+        return code;
+    }
+
+    public void setCode(String code) {
+        this.code = code;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
 }

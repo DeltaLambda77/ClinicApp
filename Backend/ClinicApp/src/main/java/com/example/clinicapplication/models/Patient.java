@@ -24,13 +24,8 @@ public class Patient {
     private String sex;
     private String contactInfo;
 
-    @ManyToMany
-    @JoinTable(
-            name = "patient_condition",
-            joinColumns = @JoinColumn(name = "patient_id"),
-            inverseJoinColumns = @JoinColumn(name = "condition_id")
-    )
-    private Set<Condition> conditions = new HashSet<>();
+    @OneToMany(mappedBy = "patient", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<PatientCondition> patientConditions = new HashSet<>();
 
     @ManyToMany
     @JoinTable(
