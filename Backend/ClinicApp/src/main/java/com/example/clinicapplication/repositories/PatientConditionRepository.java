@@ -6,4 +6,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface PatientConditionRepository extends JpaRepository<PatientCondition, Integer> {
+    Optional<PatientCondition> findByPatientIdAndConditionId(int patientId, int conditionId);
+    void deleteByPatientIdAndConditionId(int patientId, int conditionId);
 }
