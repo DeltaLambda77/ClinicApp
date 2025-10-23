@@ -1,4 +1,4 @@
-package com.example.patientmatching.model;
+package com.example.clinicapplication.models;
 
 import jakarta.persistence.*;
 import lombok.*;
