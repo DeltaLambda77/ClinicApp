@@ -17,12 +17,18 @@
         <a href="patients.php">View Patients</a>
         <a href="add_patient.php">Add Patient</a>
         <a href="eligibility.php">Check Eligibility</a>
+        <a href="modify_patient.php">Modify Patients</a>
     </nav>
 
     <main>
         <h2>System Overview</h2>
-        <p>This is the frontend prototype for the Clinical Trial Management System for Milestone 2. 
-        </p>
+        <p>Welcome to the Clinical Trial Management System </p>
+        <ul>
+    <li><strong>View Patients:</strong> Access a list of all patients with demographic details along with statistics and a distribution of ages.</li>
+    <li><strong>Add Patients:</strong> Easily register new patients for clinical trials.</li>
+    <li><strong>Check Eligibility:</strong> Determines which patients meet the requierments for the trails and the additional analysis.</li>
+    <li><strong>Modify Patients:</strong> Allows the editing of patient information or the ability to remove patients.</li>
+    </ul>
     </main>
 </body>
 </html>
