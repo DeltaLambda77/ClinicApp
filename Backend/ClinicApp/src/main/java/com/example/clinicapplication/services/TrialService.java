@@ -20,7 +20,7 @@ public class TrialService {
         return trialRepository.findAll();
     }
 
-    public Optional<Trial> getTrialById(int id) {
+    public Optional<Trial> getTrialById(Long id) {
         return trialRepository.findById(id);
     }
 
@@ -28,7 +28,7 @@ public class TrialService {
         return trialRepository.save(trial);
     }
 
-    public Trial updateTrial(int id, Trial updatedTrial) {
+    public Trial updateTrial(Long id, Trial updatedTrial) {
         return trialRepository.findById(id).map(existing -> {
             existing.setTitle(updatedTrial.getTitle());
             existing.setMinimumAge(updatedTrial.getMinimumAge());
@@ -39,7 +39,7 @@ public class TrialService {
         }).orElse(null);
     }
 
-    public void deleteTrial(int id) {
+    public void deleteTrial(Long id) {
         trialRepository.deleteById(id);
     }
 }
