@@ -8,8 +8,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface TrialRequirementRepository extends JpaRepository<TrialRequirement, Integer> {
-
+public interface TrialRequirementRepository extends JpaRepository<TrialRequirement, Long> {
     @Query("SELECT tr FROM TrialRequirement tr WHERE tr.trial.trialId = :trialId")
     List<TrialRequirement> findByTrialTrialId(@Param("trialId") Long trialId);
 }

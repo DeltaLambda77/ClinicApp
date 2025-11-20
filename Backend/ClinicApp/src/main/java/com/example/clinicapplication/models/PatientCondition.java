@@ -7,10 +7,11 @@ import lombok.*;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "patient_condition")
+@Table(name = "PatientCondition")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class PatientCondition {
 
     @EmbeddedId
@@ -18,14 +19,15 @@ public class PatientCondition {
 
     @ManyToOne
     @MapsId("patientId")
-    @JoinColumn(name = "patient_id")
-    @JsonIgnore  // Ignore to prevent circular reference
+    @JoinColumn(name = "PatientID")
+    @JsonIgnore
     private Patient patient;
 
     @ManyToOne
     @MapsId("conditionId")
-    @JoinColumn(name = "condition_id")
-    private Condition condition;
+    @JoinColumn(name = "ConditionID")
+    private MedicalCondition condition;
 
+    @Column(name = "DiagnosisDate", nullable = false)
     private LocalDate diagnosisDate;
 }

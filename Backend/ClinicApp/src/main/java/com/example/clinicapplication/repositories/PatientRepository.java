@@ -7,15 +7,15 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface PatientRepository extends JpaRepository<Patient, Integer> {
-
+public interface PatientRepository extends JpaRepository<Patient, Long> {
+    // Keep existing methods
     List<Patient> findByLastName(String lastName);
 
     @Query(value = """
-        SELECT p.* FROM patient p
-        JOIN patient_condition pc ON p.patient_id = pc.patient_id
-        JOIN condition c ON c.condition_id = pc.condition_id
-        WHERE c.name = :conditionName
+        SELECT p.* FROM Patient p
+        JOIN PatientCondition pc ON p.PatientID = pc.PatientID
+        JOIN MedicalCondition c ON c.ConditionID = pc.ConditionID
+        WHERE c.Name = :conditionName
         """, nativeQuery = true)
     List<Patient> findPatientsByCondition(String conditionName);
 }

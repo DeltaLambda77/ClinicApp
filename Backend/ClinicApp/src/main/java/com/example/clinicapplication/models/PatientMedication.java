@@ -1,20 +1,36 @@
 package com.example.clinicapplication.models;
 
-import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
+
 @Entity
-@Table(name = "patient_medication")
+@Table(name = "PatientMedication")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class PatientMedication {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
 
-    private String medicationName;
-    private String dosage;
-    private String frequency;
+    @EmbeddedId
+    private PatientMedicationId id;
+
+    @ManyToOne
+    @MapsId("patientId")
+    @JoinColumn(name = "PatientID")
+    @JsonIgnore
+    private Patient patient;
+
+    @ManyToOne
+    @MapsId("medicationId")
+    @JoinColumn(name = "MedicationID")
+    private Medication medication;
+
+    @Column(name = "StartDate", nullable = false)
+    private LocalDate startDate;
+
+    @Column(name = "EndDate")
+    private LocalDate endDate;
 }

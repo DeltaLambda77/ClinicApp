@@ -1,5 +1,6 @@
 package com.example.clinicapplication.dto;
 
+import com.example.clinicapplication.models.Patient;
 import java.time.LocalDate;
 
 public class PatientDTO {

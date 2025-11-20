@@ -3,34 +3,35 @@ package com.example.clinicapplication.models;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
-
 import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-@Table(name = "Medication")
+@Table(name = "MedicalCondition")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Medication {
-
+public class MedicalCondition {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "MedicationID")
-    private Long medicationId;
+    @Column(name = "ConditionID")
+    private Long conditionId;
 
     @Column(name = "Name", nullable = false, unique = true, length = 100)
     private String name;
 
-    @Column(name = "Dosage", length = 50)
-    private String dosage;
+    @Column(name = "Code", unique = true, length = 20)
+    private String code;
 
-    @OneToMany(mappedBy = "medication")
+    @Column(name = "Description", columnDefinition = "TEXT")
+    private String description;
+
+    @OneToMany(mappedBy = "condition", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
-    private Set<PatientMedication> patientMedications = new HashSet<>();
+    private Set<PatientCondition> patientConditions = new HashSet<>();
 
-    @OneToMany(mappedBy = "excludedMedication")
+    @OneToMany(mappedBy = "condition")
     @JsonIgnore
     private Set<TrialRequirement> trialRequirements = new HashSet<>();
 }

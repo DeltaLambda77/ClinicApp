@@ -7,8 +7,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface TrialRepository extends JpaRepository<Trial, Integer> {
-
+public interface TrialRepository extends JpaRepository<Trial, Long> {
     @Query("SELECT t FROM Trial t WHERE t.startDate >= :start AND t.endDate <= :end")
     List<Trial> findTrialsBetweenDates(java.time.LocalDate start, java.time.LocalDate end);
 }

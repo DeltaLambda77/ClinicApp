@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
+@Table(name = "TrialRequirement")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -12,19 +13,21 @@ public class TrialRequirement {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "RequirementID")
     private Long requirementId;
 
     @ManyToOne
-    @JoinColumn(name = "trial_id")
+    @JoinColumn(name = "TrialID", nullable = false)
     private Trial trial;
 
-    @ManyToOne(optional = true)
-    @JoinColumn(name = "condition_id")
-    private Condition condition;
+    @ManyToOne
+    @JoinColumn(name = "ConditionID")
+    private MedicalCondition condition;
 
-    @ManyToOne(optional = true)
-    @JoinColumn(name = "excluded_medication_id")
+    @ManyToOne
+    @JoinColumn(name = "ExcludedMedicationID")
     private Medication excludedMedication;
 
+    @Column(name = "Notes", columnDefinition = "TEXT")
     private String notes;
 }

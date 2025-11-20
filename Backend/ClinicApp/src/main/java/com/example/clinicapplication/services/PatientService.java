@@ -32,7 +32,7 @@ public class PatientService {
                 patient.getFirstName(),
                 patient.getLastName(),
                 patient.getDateOfBirth(),
-                patient.getSex(),
+                patient.getSex() != null ? patient.getSex().name() : null,
                 patient.getContactInfo()
         );
     }

@@ -9,6 +9,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Entity
+@Table(name = "Patient")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -17,37 +18,34 @@ public class Patient {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "PatientID")
     private Long patientId;
 
+    @Column(name = "FirstName", nullable = false, length = 50)
     private String firstName;
+
+    @Column(name = "LastName", nullable = false, length = 50)
     private String lastName;
+
+    @Column(name = "DateOfBirth", nullable = false)
     private LocalDate dateOfBirth;
-    private String sex;
+
+    @Column(name = "Sex", nullable = false)
+    @Enumerated(EnumType.STRING)
+    private Sex sex;
+
+    @Column(name = "ContactInfo", length = 100)
     private String contactInfo;
-
-    public String getFirstName() { return firstName; }
-
-    public String getLastName() { return lastName; }
-
-    public LocalDate getDateOfBirth() { return dateOfBirth; }
-
-    public String getSex() { return sex; }
-
-    public String getContactInfo() { return contactInfo; }
-
-    public Long getPatientId() { return patientId; }
-
 
     @OneToMany(mappedBy = "patient", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     private Set<PatientCondition> patientConditions = new HashSet<>();
 
-    @ManyToMany
-    @JoinTable(
-            name = "patient_medication",
-            joinColumns = @JoinColumn(name = "patient_id"),
-            inverseJoinColumns = @JoinColumn(name = "medication_id")
-    )
+    @OneToMany(mappedBy = "patient", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
-    private Set<Medication> medications = new HashSet<>();
+    private Set<PatientMedication> patientMedications = new HashSet<>();
+
+    public enum Sex {
+        M, F, Other
+    }
 }

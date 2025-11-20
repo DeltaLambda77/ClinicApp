@@ -20,15 +20,16 @@ public class PatientConditionService {
         return patientConditionRepository.findAll();
     }
 
-    public Optional<PatientCondition> getPatientConditionByIds(long patientId, long conditionId) {
+    public Optional<PatientCondition> getPatientConditionByIds(Long patientId, Long conditionId) {
         return patientConditionRepository.findByPatientIdAndConditionId(patientId, conditionId);
+    }
+
+    public void deletePatientCondition(Long patientId, Long conditionId) {
+        patientConditionRepository.deleteByPatientIdAndConditionId(patientId, conditionId);
     }
 
     public PatientCondition addPatientCondition(PatientCondition pc) {
         return patientConditionRepository.save(pc);
     }
 
-    public void deletePatientCondition(long patientId, long conditionId) {
-        patientConditionRepository.deleteByPatientIdAndConditionId(patientId, conditionId);
-    }
 }
