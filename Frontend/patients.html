@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Patients - Clinical Trial Management</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="auth-helper.js"></script>
+</head>
+<body>
+    <header>Clinical Trial Management System</header>
+    <nav>
+        <a href="home.html">Home</a>
+        <a href="patients.html" class="active">View Patients</a>
+        <a href="add_patient.html">Add Patient</a>
+        <a href="eligibility.html">Check Eligibility</a>
+        <a href="modify_patient.html">Modify Patients</a>
+        <a href="users.html">Users & Roles</a>
+        <a href="reports.html">Reports</a>
+    </nav>
+    <main>
+        <h2>All Patients</h2>
+        
+        <div id="loading" class="loading">Loading patients...</div>
+        <div id="error" class="error" style="display: none;"></div>
+        
+        <div id="patients-content" style="display: none;">
+            <table id="patients-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>First Name</th>
+                        <th>Last Name</th>
+                        <th>Date of Birth</th>
+                        <th>Age</th>
+                        <th>Sex</th>
+                        <th>Contact Info</th>
+                    </tr>
+                </thead>
+                <tbody id="patients-tbody">
+                </tbody>
+            </table>
+            <p><em>Total: <span id="patient-count">0</span> patient(s)</em></p>
+
+            <h2>Patient Statistics</h2>
+            <table class="stats-table">
+                <thead>
+                    <tr>
+                        <th>Total Patients</th>
+                        <th>Average Age</th>
+                        <th>Min Age</th>
+                        <th>Max Age</th>
+                        <th>Male</th>
+                        <th>Female</th>
+                        <th>Other</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td id="stat-total">0</td>
+                        <td id="stat-avg">0</td>
+                        <td id="stat-min">0</td>
+                        <td id="stat-max">0</td>
+                        <td id="stat-male">0</td>
+                        <td id="stat-female">0</td>
+                        <td id="stat-other">0</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>Patient Age Distribution</h2>
+            <table id="age-distribution-table">
+                <thead>
+                    <tr>
+                        <th>Age Group</th>
+                        <th>Patient Count</th>
+                        <th>Percentage</th>
+                    </tr>
+                </thead>
+                <tbody id="age-distribution-tbody">
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <script>
+        const API_BASE = 'http://localhost:8080/api';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check authentication first
+            if (checkAuthentication()) {
+                loadPatients();
+            }
+        });
+
+        async function loadPatients() {
+            const loadingElement = document.getElementById('loading');
+            const errorElement = document.getElementById('error');
+            const contentElement = document.getElementById('patients-content');
+
+            try {
+                const response = await fetch(`${API_BASE}/patients`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const patients = await response.json();
+
+                if (patients.length === 0) {
+                    throw new Error('No patients found in database');
+                }
+
+                displayPatients(patients);
+                calculateStatistics(patients);
+                calculateAgeDistribution(patients);
+
+                loadingElement.style.display = 'none';
+                contentElement.style.display = 'block';
+            } catch (error) {
+                loadingElement.style.display = 'none';
+                errorElement.textContent = `Error loading patients: ${error.message}. Make sure Spring Boot backend is running at ${API_BASE}`;
+                errorElement.style.display = 'block';
+            }
+        }
+
+        function calculateAge(dateOfBirth) {
+            const today = new Date();
+            const birthDate = new Date(dateOfBirth);
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const monthDiff = today.getMonth() - birthDate.getMonth();
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            return age;
+        }
+
+        function displayPatients(patients) {
+            const tbody = document.getElementById('patients-tbody');
+            tbody.innerHTML = '';
+
+            patients.forEach(patient => {
+                const age = calculateAge(patient.dateOfBirth);
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${patient.patientId}</td>
+                    <td>${escapeHtml(patient.firstName)}</td>
+                    <td>${escapeHtml(patient.lastName)}</td>
+                    <td>${patient.dateOfBirth}</td>
+                    <td>${age}</td>
+                    <td>${patient.sex}</td>
+                    <td>${patient.contactInfo || 'N/A'}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            document.getElementById('patient-count').textContent = patients.length;
+        }
+
+        function calculateStatistics(patients) {
+            const total = patients.length;
+            const ages = patients.map(p => calculateAge(p.dateOfBirth));
+            const avgAge = (ages.reduce((a, b) => a + b, 0) / total).toFixed(1);
+            const minAge = Math.min(...ages);
+            const maxAge = Math.max(...ages);
+
+            const maleCount = patients.filter(p => p.sex === 'M').length;
+            const femaleCount = patients.filter(p => p.sex === 'F').length;
+            const otherCount = patients.filter(p => p.sex === 'Other').length;
+
+            document.getElementById('stat-total').textContent = total;
+            document.getElementById('stat-avg').textContent = avgAge + ' years';
+            document.getElementById('stat-min').textContent = minAge;
+            document.getElementById('stat-max').textContent = maxAge;
+            document.getElementById('stat-male').textContent = maleCount;
+            document.getElementById('stat-female').textContent = femaleCount;
+            document.getElementById('stat-other').textContent = otherCount;
+        }
+
+        function calculateAgeDistribution(patients) {
+            const distribution = {
+                'Under 18': 0,
+                '18-35': 0,
+                '36-55': 0,
+                'Over 55': 0
+            };
+
+            patients.forEach(patient => {
+                const age = calculateAge(patient.dateOfBirth);
+                if (age < 18) {
+                    distribution['Under 18']++;
+                } else if (age >= 18 && age <= 35) {
+                    distribution['18-35']++;
+                } else if (age >= 36 && age <= 55) {
+                    distribution['36-55']++;
+                } else {
+                    distribution['Over 55']++;
+                }
+            });
+
+            const tbody = document.getElementById('age-distribution-tbody');
+            tbody.innerHTML = '';
+
+            const total = patients.length;
+            Object.entries(distribution).forEach(([ageGroup, count]) => {
+                if (count > 0) {
+                    const percentage = ((count / total) * 100).toFixed(1);
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${ageGroup}</td>
+                        <td>${count}</td>
+                        <td>${percentage}%</td>
+                    `;
+                    tbody.appendChild(row);
+                }
+            });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

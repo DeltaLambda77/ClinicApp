@@ -1,4 +1,6 @@
 <?php
+// fetch_eligibility.php
+
 include 'api_config.php';
 
 $selected_trial = $_GET['trial'] ?? null;

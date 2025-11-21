@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management - Clinical Trial Management</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="auth-helper.js"></script>
+</head>
+<body>
+    <header>Clinical Trial Management System</header>
+    <nav>
+        <a href="home.html">Home</a>
+        <a href="patients.html">View Patients</a>
+        <a href="add_patient.html">Add Patient</a>
+        <a href="eligibility.html">Check Eligibility</a>
+        <a href="modify_patient.html">Modify Patients</a>
+        <a href="users.html" class="active">Users & Roles</a>
+        <a href="reports.html">Reports</a>
+    </nav>
+    <main>
+        <h2>User Management & Role Assignment</h2>
+        
+        <div id="loading" class="loading">Loading user data...</div>
+        <div id="error" class="error" style="display: none;"></div>
+        
+        <div id="content" style="display: none;">
+            <!-- User Statistics (AGGREGATE + GROUP BY) -->
+            <h3>User Statistics by Role</h3>
+            <table id="role-stats-table">
+                <thead>
+                    <tr>
+                        <th>Role Name</th>
+                        <th>User Count</th>
+                        <th>Can Add Patients</th>
+                        <th>Can Manage Trials</th>
+                        <th>Can View Reports</th>
+                    </tr>
+                </thead>
+                <tbody id="role-stats-tbody"></tbody>
+            </table>
+
+            <!-- All Users with Roles (INNER JOIN) -->
+            <h3>All Users with Role Assignments</h3>
+            <table id="users-table">
+                <thead>
+                    <tr>
+                        <th>User ID</th>
+                        <th>Username</th>
+                        <th>Full Name</th>
+                        <th>Email</th>
+                        <th>Role(s)</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="users-tbody"></tbody>
+            </table>
+            <p><em>Total: <span id="user-count">0</span> active user(s)</em></p>
+
+            <!-- Users with Multiple Roles (GROUP BY + HAVING) -->
+            <h3>Power Users (Multiple Roles)</h3>
+            <table id="power-users-table">
+                <thead>
+                    <tr>
+                        <th>User ID</th>
+                        <th>Username</th>
+                        <th>Full Name</th>
+                        <th>Role Count</th>
+                        <th>Roles</th>
+                    </tr>
+                </thead>
+                <tbody id="power-users-tbody"></tbody>
+            </table>
+
+            <!-- Users Without Roles (SUBQUERY with NOT IN) -->
+            <h3>Users Without Role Assignments</h3>
+            <div id="no-role-users">
+                <table id="no-role-table" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>User ID</th>
+                            <th>Username</th>
+                            <th>Full Name</th>
+                            <th>Email</th>
+                            <th>Created</th>
+                        </tr>
+                    </thead>
+                    <tbody id="no-role-tbody"></tbody>
+                </table>
+                <p id="no-role-message" style="color: green;"></p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const API_BASE = 'http://localhost:8080/api';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (checkAuthentication()) {
+                loadAllData();
+            }
+        });
+
+        async function loadAllData() {
+            const loadingElement = document.getElementById('loading');
+            const errorElement = document.getElementById('error');
+            const contentElement = document.getElementById('content');
+
+            try {
+                // Fetch all necessary data
+                const [usersResponse, rolesResponse, userRolesResponse] = await Promise.all([
+                    fetch(`${API_BASE}/users`),
+                    fetch(`${API_BASE}/roles`),
+                    fetch(`${API_BASE}/user-roles`)
+                ]);
+
+                if (!usersResponse.ok || !rolesResponse.ok || !userRolesResponse.ok) {
+                    throw new Error('Failed to fetch data from API');
+                }
+
+                const users = await usersResponse.json();
+                const roles = await rolesResponse.json();
+                const userRoles = await userRolesResponse.json();
+
+                // Calculate statistics
+                displayRoleStatistics(roles, userRoles, users);
+                displayUsersWithRoles(users, roles, userRoles);
+                displayPowerUsers(users, roles, userRoles);
+                displayUsersWithoutRoles(users, userRoles);
+
+                loadingElement.style.display = 'none';
+                contentElement.style.display = 'block';
+
+            } catch (error) {
+                loadingElement.style.display = 'none';
+                errorElement.textContent = `Error: ${error.message}. This page requires backend API endpoints for users, roles, and user-roles.`;
+                errorElement.style.display = 'block';
+            }
+        }
+
+        // Query Type: AGGREGATE + GROUP BY + LEFT JOIN
+        function displayRoleStatistics(roles, userRoles, users) {
+            const tbody = document.getElementById('role-stats-tbody');
+            tbody.innerHTML = '';
+
+            roles.forEach(role => {
+                const usersInRole = userRoles.filter(ur => ur.roleId === role.roleId);
+                const activeUserCount = usersInRole.filter(ur => {
+                    const user = users.find(u => u.userId === ur.userId);
+                    return user && user.isActive;
+                }).length;
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${escapeHtml(role.roleName)}</strong></td>
+                    <td>${activeUserCount}</td>
+                    <td>${role.canAddPatients ? 'YES' : 'NO'}</td>
+                    <td>${role.canManageTrials ? 'YES' : 'NO'}</td>
+                    <td>${role.canViewReports ? 'YES' : 'NO'}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Query Type: INNER JOIN (Users + UserRoles + Roles)
+        function displayUsersWithRoles(users, roles, userRoles) {
+            const tbody = document.getElementById('users-tbody');
+            tbody.innerHTML = '';
+
+            const activeUsers = users.filter(u => u.isActive);
+            let count = 0;
+
+            activeUsers.forEach(user => {
+                // Get all roles for this user
+                const userRoleIds = userRoles
+                    .filter(ur => ur.userId === user.userId)
+                    .map(ur => ur.roleId);
+
+                const roleNames = userRoleIds
+                    .map(roleId => roles.find(r => r.roleId === roleId)?.roleName)
+                    .filter(name => name)
+                    .join(', ');
+
+                if (roleNames) { // Only show users with roles
+                    count++;
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${user.userId}</td>
+                        <td><strong>${escapeHtml(user.username)}</strong></td>
+                        <td>${escapeHtml(user.firstName)} ${escapeHtml(user.lastName)}</td>
+                        <td>${escapeHtml(user.email)}</td>
+                        <td><span class="badge badge-info">${escapeHtml(roleNames)}</span></td>
+                        <td><span style="color: green;">Active</span></td>
+                    `;
+                    tbody.appendChild(row);
+                }
+            });
+
+            document.getElementById('user-count').textContent = count;
+        }
+
+        // Query Type: GROUP BY + HAVING
+        function displayPowerUsers(users, roles, userRoles) {
+            const tbody = document.getElementById('power-users-tbody');
+            tbody.innerHTML = '';
+
+            const activeUsers = users.filter(u => u.isActive);
+
+            activeUsers.forEach(user => {
+                const userRoleIds = userRoles
+                    .filter(ur => ur.userId === user.userId)
+                    .map(ur => ur.roleId);
+
+                // HAVING clause: COUNT > 1
+                if (userRoleIds.length > 1) {
+                    const roleNames = userRoleIds
+                        .map(roleId => roles.find(r => r.roleId === roleId)?.roleName)
+                        .filter(name => name)
+                        .join(', ');
+
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${user.userId}</td>
+                        <td><strong>${escapeHtml(user.username)}</strong></td>
+                        <td>${escapeHtml(user.firstName)} ${escapeHtml(user.lastName)}</td>
+                        <td><span class="badge badge-success">${userRoleIds.length}</span></td>
+                        <td>${escapeHtml(roleNames)}</td>
+                    `;
+                    tbody.appendChild(row);
+                }
+            });
+
+            if (tbody.children.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = '<td colspan="5" style="text-align: center; color: #666;"><em>No users with multiple roles found</em></td>';
+                tbody.appendChild(row);
+            }
+        }
+
+        // Query Type: SUBQUERY with NOT IN
+        function displayUsersWithoutRoles(users, userRoles) {
+            const table = document.getElementById('no-role-table');
+            const tbody = document.getElementById('no-role-tbody');
+            const message = document.getElementById('no-role-message');
+            tbody.innerHTML = '';
+
+            const userIdsWithRoles = [...new Set(userRoles.map(ur => ur.userId))];
+            const usersWithoutRoles = users.filter(u => 
+                u.isActive && !userIdsWithRoles.includes(u.userId)
+            );
+
+            if (usersWithoutRoles.length === 0) {
+                message.textContent = 'All active users have role assignments';
+                message.style.display = 'block';
+                table.style.display = 'none';
+            } else {
+                message.style.display = 'none';
+                table.style.display = 'table';
+
+                usersWithoutRoles.forEach(user => {
+                    const row = document.createElement('tr');
+                    row.style.backgroundColor = '#fff3cd';
+                    row.innerHTML = `
+                        <td>${user.userId}</td>
+                        <td><strong>${escapeHtml(user.username)}</strong></td>
+                        <td>${escapeHtml(user.firstName)} ${escapeHtml(user.lastName)}</td>
+                        <td>${escapeHtml(user.email)}</td>
+                        <td>${user.createdAt || 'N/A'}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

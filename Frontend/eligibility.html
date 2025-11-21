@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check Trial Eligibility - Clinical Trial Management</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="auth-helper.js"></script>
+</head>
+<body>
+    <header>Clinical Trial Management System</header>
+    <nav>
+        <a href="home.html">Home</a>
+        <a href="patients.html">View Patients</a>
+        <a href="add_patient.html">Add Patient</a>
+        <a href="eligibility.html" class="active">Check Eligibility</a>
+        <a href="modify_patient.html">Modify Patients</a>
+        <a href="users.html">Users & Roles</a>
+        <a href="reports.html">Reports</a>
+    </nav>
+    <main>
+        <h2>Check Trial Eligibility</h2>
+        
+        <div id="loading" class="loading">Loading trials...</div>
+        <div id="error" class="error" style="display: none;"></div>
+        
+        <div id="eligibility-content" style="display: none;">
+            <!-- Trial Selection -->
+            <form id="trial-form">
+                <label><strong>Select Trial:</strong></label>
+                <select id="trial-select" name="trial">
+                    <option value="">-- Select a Trial --</option>
+                </select>
+            </form>
+
+            <!-- Trial Details -->
+            <div id="trial-details" style="display: none;" class="trial-info">
+                <h3 id="trial-title"></h3>
+                <p><strong>Trial ID:</strong> <span id="trial-id"></span></p>
+                <p><strong>Age Range:</strong> <span id="trial-age-range"></span></p>
+                <p><strong>Start Date:</strong> <span id="trial-start"></span></p>
+                <p><strong>End Date:</strong> <span id="trial-end"></span></p>
+            </div>
+
+            <!-- Eligible Patients -->
+            <div id="eligible-section" style="display: none;">
+                <h3>Eligible Patients (Age-Based)</h3>
+                <div id="no-eligible" class="warning" style="display: none;">
+                    No patients found eligible for this trial based on age criteria.
+                </div>
+                <table id="eligible-table" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>Patient ID</th>
+                            <th>Name</th>
+                            <th>Age</th>
+                            <th>Sex</th>
+                            <th>Date of Birth</th>
+                            <th>Contact</th>
+                        </tr>
+                    </thead>
+                    <tbody id="eligible-tbody">
+                    </tbody>
+                </table>
+                <p id="eligible-count" style="display: none;"><em></em></p>
+            </div>
+
+            <!-- Additional Analysis -->
+            <div style="background-color: #f0f8ff; padding: 15px; margin: 20px 0; border-radius: 5px; border: 1px solid #b8daff;">
+                <h3>📊 Additional Eligibility Analysis</h3>
+
+                <h4>Patients Eligible for ANY Trial</h4>
+                <table id="any-eligible-table">
+                    <thead>
+                        <tr>
+                            <th>Patient ID</th>
+                            <th>Name</th>
+                            <th>Age</th>
+                            <th>Eligible Trials</th>
+                        </tr>
+                    </thead>
+                    <tbody id="any-eligible-tbody">
+                    </tbody>
+                </table>
+                <p id="any-eligible-summary"><em></em></p>
+
+                <h4>Trials With No Eligible Patients</h4>
+                <div id="no-patients-section">
+                    <table id="no-patients-table">
+                        <thead>
+                            <tr>
+                                <th>Trial ID</th>
+                                <th>Title</th>
+                                <th>Age Range</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="no-patients-tbody">
+                        </tbody>
+                    </table>
+                    <p id="no-patients-summary"></p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const API_BASE = 'http://localhost:8080/api';
+        let allPatients = [];
+        let allTrials = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (checkAuthentication()) {
+                initialize();
+            }
+        });
+
+        async function initialize() {
+            await loadData();
+            calculateAdditionalAnalysis();
+            
+            document.getElementById('trial-select').addEventListener('change', handleTrialSelection);
+        }
+
+        async function loadData() {
+            const loadingElement = document.getElementById('loading');
+            const errorElement = document.getElementById('error');
+            const contentElement = document.getElementById('eligibility-content');
+
+            try {
+                // Fetch patients and trials
+                const [patientsResponse, trialsResponse] = await Promise.all([
+                    fetch(`${API_BASE}/patients`),
+                    fetch(`${API_BASE}/trials`)
+                ]);
+
+                if (!patientsResponse.ok || !trialsResponse.ok) {
+                    throw new Error('Failed to fetch data');
+                }
+
+                allPatients = await patientsResponse.json();
+                allTrials = await trialsResponse.json();
+
+                populateTrialSelect();
+
+                loadingElement.style.display = 'none';
+                contentElement.style.display = 'block';
+
+            } catch (error) {
+                loadingElement.style.display = 'none';
+                errorElement.textContent = `Error: ${error.message}. Make sure Spring Boot backend is running.`;
+                errorElement.style.display = 'block';
+            }
+        }
+
+        function populateTrialSelect() {
+            const select = document.getElementById('trial-select');
+            
+            allTrials.forEach(trial => {
+                const option = document.createElement('option');
+                option.value = trial.trialId;
+                option.textContent = `${trial.title} (Ages: ${trial.minimumAge}-${trial.maximumAge})`;
+                select.appendChild(option);
+            });
+        }
+
+        function calculateAge(dateOfBirth) {
+            const today = new Date();
+            const birthDate = new Date(dateOfBirth);
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const monthDiff = today.getMonth() - birthDate.getMonth();
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            return age;
+        }
+
+        function handleTrialSelection() {
+            const trialId = parseInt(document.getElementById('trial-select').value);
+            
+            if (!trialId) {
+                document.getElementById('trial-details').style.display = 'none';
+                document.getElementById('eligible-section').style.display = 'none';
+                return;
+            }
+
+            const trial = allTrials.find(t => t.trialId === trialId);
+            if (!trial) return;
+
+            // Display trial details
+            document.getElementById('trial-title').textContent = trial.title;
+            document.getElementById('trial-id').textContent = trial.trialId;
+            document.getElementById('trial-age-range').textContent = `${trial.minimumAge} - ${trial.maximumAge} years`;
+            document.getElementById('trial-start').textContent = trial.startDate;
+            document.getElementById('trial-end').textContent = trial.endDate;
+            document.getElementById('trial-details').style.display = 'block';
+
+            // Calculate eligible patients
+            const eligiblePatients = allPatients.filter(patient => {
+                const age = calculateAge(patient.dateOfBirth);
+                return age >= trial.minimumAge && age <= trial.maximumAge;
+            });
+
+            displayEligiblePatients(eligiblePatients);
+            document.getElementById('eligible-section').style.display = 'block';
+        }
+
+        function displayEligiblePatients(patients) {
+            const noEligibleDiv = document.getElementById('no-eligible');
+            const table = document.getElementById('eligible-table');
+            const tbody = document.getElementById('eligible-tbody');
+            const countP = document.getElementById('eligible-count');
+
+            tbody.innerHTML = '';
+
+            if (patients.length === 0) {
+                noEligibleDiv.style.display = 'block';
+                table.style.display = 'none';
+                countP.style.display = 'none';
+            } else {
+                noEligibleDiv.style.display = 'none';
+                table.style.display = 'table';
+                countP.style.display = 'block';
+
+                patients.forEach(patient => {
+                    const age = calculateAge(patient.dateOfBirth);
+                    const row = document.createElement('tr');
+                    row.className = 'eligible';
+                    row.innerHTML = `
+                        <td>${patient.patientId}</td>
+                        <td>${escapeHtml(patient.firstName)} ${escapeHtml(patient.lastName)}</td>
+                        <td>${age}</td>
+                        <td>${patient.sex}</td>
+                        <td>${patient.dateOfBirth}</td>
+                        <td>${patient.contactInfo || 'N/A'}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+                countP.innerHTML = `<em>Found <strong>${patients.length}</strong> eligible patient(s) based on age criteria</em>`;
+            }
+        }
+
+        function calculateAdditionalAnalysis() {
+            // Patients eligible for ANY trial
+            const eligibilityMap = new Map();
+
+            allPatients.forEach(patient => {
+                const age = calculateAge(patient.dateOfBirth);
+                let eligibleTrialCount = 0;
+
+                allTrials.forEach(trial => {
+                    if (age >= trial.minimumAge && age <= trial.maximumAge) {
+                        eligibleTrialCount++;
+                    }
+                });
+
+                if (eligibleTrialCount > 0) {
+                    eligibilityMap.set(patient.patientId, {
+                        patient: patient,
+                        age: age,
+                        eligibleTrialCount: eligibleTrialCount
+                    });
+                }
+            });
+
+            // Display patients eligible for any trial
+            const anyEligibleTbody = document.getElementById('any-eligible-tbody');
+            anyEligibleTbody.innerHTML = '';
+
+            const sortedEntries = Array.from(eligibilityMap.values())
+                .sort((a, b) => b.eligibleTrialCount - a.eligibleTrialCount);
+
+            sortedEntries.forEach(entry => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${entry.patient.patientId}</td>
+                    <td>${escapeHtml(entry.patient.firstName)} ${escapeHtml(entry.patient.lastName)}</td>
+                    <td>${entry.age}</td>
+                    <td><span class="badge badge-success">${entry.eligibleTrialCount} trial(s)</span></td>
+                `;
+                anyEligibleTbody.appendChild(row);
+            });
+
+            document.getElementById('any-eligible-summary').innerHTML = 
+                `<em>${eligibilityMap.size} patient(s) are eligible for at least one trial</em>`;
+
+            // Trials with no eligible patients
+            const noPatientTrials = allTrials.filter(trial => {
+                return !allPatients.some(patient => {
+                    const age = calculateAge(patient.dateOfBirth);
+                    return age >= trial.minimumAge && age <= trial.maximumAge;
+                });
+            });
+
+            const noPatientsTbody = document.getElementById('no-patients-tbody');
+            noPatientsTbody.innerHTML = '';
+
+            if (noPatientTrials.length === 0) {
+                document.getElementById('no-patients-summary').innerHTML = 
+                    '<p style="color: green;"> All trials have at least one eligible patient!</p>';
+            } else {
+                noPatientTrials.forEach(trial => {
+                    const row = document.createElement('tr');
+                    row.className = 'ineligible';
+                    row.innerHTML = `
+                        <td>${trial.trialId}</td>
+                        <td>${escapeHtml(trial.title)}</td>
+                        <td>${trial.minimumAge}-${trial.maximumAge} years</td>
+                        <td><span style="color: #721c24;">No eligible patients</span></td>
+                    `;
+                    noPatientsTbody.appendChild(row);
+                });
+
+                document.getElementById('no-patients-summary').innerHTML = 
+                    `<em>${noPatientTrials.length} trial(s) have no eligible patients based on age</em>`;
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

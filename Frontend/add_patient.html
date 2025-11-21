@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Patient - Clinical Trial Management</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="auth-helper.js"></script>
+</head>
+<body>
+    <header>Clinical Trial Management System</header>
+    <nav>
+        <a href="home.html">Home</a>
+        <a href="patients.html">View Patients</a>
+        <a href="add_patient.html" class="active">Add Patient</a>
+        <a href="eligibility.html">Check Eligibility</a>
+        <a href="modify_patient.html">Modify Patients</a>
+        <a href="users.html">Users & Roles</a>
+        <a href="reports.html">Reports</a>
+    </nav>
+    <main>
+        <h2>Add New Patient</h2>
+        
+        <div id="message" style="display: none;"></div>
+
+        <form id="add-patient-form">
+            <label for="firstName">First Name <span class="required">*</span></label>
+            <input type="text" id="firstName" name="firstName" required maxlength="50">
+
+            <label for="lastName">Last Name <span class="required">*</span></label>
+            <input type="text" id="lastName" name="lastName" required maxlength="50">
+
+            <label for="dateOfBirth">Date of Birth <span class="required">*</span></label>
+            <input type="date" id="dateOfBirth" name="dateOfBirth" required>
+
+            <label for="sex">Sex <span class="required">*</span></label>
+            <select id="sex" name="sex" required>
+                <option value="">-- Select Sex --</option>
+                <option value="M">Male</option>
+                <option value="F">Female</option>
+                <option value="Other">Other</option>
+            </select>
+
+            <label for="contactInfo">Contact Info (Email/Phone)</label>
+            <input type="text" id="contactInfo" name="contactInfo" maxlength="100" placeholder="email@example.com or phone number">
+
+            <button type="submit" id="submit-btn">Add Patient</button>
+        </form>
+
+        <p style="text-align: center; margin-top: 20px;">
+            <a href="patients.html">← View All Patients</a>
+        </p>
+    </main>
+
+    <script>
+        const API_BASE = 'http://localhost:8080/api';
+
+        // Check authentication and permissions
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!checkAuthentication()) {
+                return; // Will redirect to login
+            }
+            
+            // Check if user has permission to add patients
+            if (!checkPagePermission()) {
+                return; // Will redirect to home
+            }
+            
+            // If we get here, user is authorized
+            initializePage();
+        });
+
+        function initializePage() {
+            // Set max date to today
+            document.getElementById('dateOfBirth').max = new Date().toISOString().split('T')[0];
+
+            document.getElementById('add-patient-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const messageDiv = document.getElementById('message');
+                const submitBtn = document.getElementById('submit-btn');
+
+                // Get form data
+                const formData = {
+                    firstName: document.getElementById('firstName').value.trim(),
+                    lastName: document.getElementById('lastName').value.trim(),
+                    dateOfBirth: document.getElementById('dateOfBirth').value,
+                    sex: document.getElementById('sex').value,
+                    contactInfo: document.getElementById('contactInfo').value.trim() || null
+                };
+
+                // Validate
+                if (!formData.firstName || !formData.lastName || !formData.dateOfBirth || !formData.sex) {
+                    showMessage('Please fill out all required fields.', 'error');
+                    return;
+                }
+
+                // Disable button during submission
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Adding...';
+
+                try {
+                    const response = await fetch(`${API_BASE}/patients`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(formData)
+                    });
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(`Failed to add patient: ${errorText}`);
+                    }
+
+                    const newPatient = await response.json();
+                    
+                    showMessage(`Success! Patient added with ID: ${newPatient.patientId}`, 'success');
+                    
+                    // Clear form
+                    document.getElementById('add-patient-form').reset();
+
+                    // Scroll to message
+                    messageDiv.scrollIntoView({ behavior: 'smooth' });
+
+                } catch (error) {
+                    showMessage(`Error: ${error.message}. Make sure Spring Boot backend is running.`, 'error');
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Add Patient';
+                }
+            });
+        }
+
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.className = type;
+            messageDiv.style.display = 'block';
+
+            // Hide message after 5 seconds
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

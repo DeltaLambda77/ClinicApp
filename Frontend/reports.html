@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Reports - Clinical Trial Management</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="auth-helper.js"></script>
+</head>
+<body>
+    <header>Clinical Trial Management System</header>
+    <nav>
+        <a href="home.html">Home</a>
+        <a href="patients.html">View Patients</a>
+        <a href="add_patient.html">Add Patient</a>
+        <a href="eligibility.html">Check Eligibility</a>
+        <a href="modify_patient.html">Modify Patients</a>
+        <a href="users.html">Users & Roles</a>
+        <a href="reports.html" class="active">Reports</a>
+    </nav>
+    <main>
+        <h2>System Activity Reports & Analytics</h2>
+        
+        <div id="loading" class="loading">Loading system reports...</div>
+        <div id="error" class="error" style="display: none;"></div>
+        
+        <div id="content" style="display: none;">
+            <!-- UNION Query - System Overview -->
+            <h3>System Overview (Multi-Table Summary)</h3>
+            <table id="system-overview-table">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Count</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="system-overview-tbody"></tbody>
+            </table>
+
+            <!-- Complex JOIN with Conditions -->
+            <h3>Patient-Trial Matching Analysis</h3>
+            <table id="matching-table">
+                <thead>
+                    <tr>
+                        <th>Patient Name</th>
+                        <th>Age</th>
+                        <th>Conditions</th>
+                        <th>Eligible Trials</th>
+                        <th>Eligibility %</th>
+                    </tr>
+                </thead>
+                <tbody id="matching-tbody"></tbody>
+            </table>
+
+            <!-- Aggregate Analysis by Category -->
+            <h3>Patient Distribution by Medical Condition</h3>
+            <table id="condition-dist-table">
+                <thead>
+                    <tr>
+                        <th>Medical Condition</th>
+                        <th>Patient Count</th>
+                        <th>Percentage of Total</th>
+                        <th>Related Trials</th>
+                    </tr>
+                </thead>
+                <tbody id="condition-dist-tbody"></tbody>
+            </table>
+
+            <!-- Medication Usage Report -->
+            <h3>Top Medications by Usage</h3>
+            <table id="medication-usage-table">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Medication</th>
+                        <th>Dosage</th>
+                        <th>Active Patients</th>
+                        <th>Usage Trend</th>
+                    </tr>
+                </thead>
+                <tbody id="medication-usage-tbody"></tbody>
+            </table>
+
+            <!-- Trial Enrollment Capacity -->
+            <h3>Trial Enrollment Analysis</h3>
+            <table id="trial-enrollment-table">
+                <thead>
+                    <tr>
+                        <th>Trial Name</th>
+                        <th>Age Range</th>
+                        <th>Eligible Patients</th>
+                        <th>With Required Condition</th>
+                        <th>Without Excluded Meds</th>
+                        <th>Enrollment Status</th>
+                    </tr>
+                </thead>
+                <tbody id="trial-enrollment-tbody"></tbody>
+            </table>
+        </div>
+    </main>
+
+    <script>
+        const API_BASE = 'http://localhost:8080/api';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (checkAuthentication()) {
+                loadAllReports();
+            }
+        });
+
+        async function loadAllReports() {
+            const loadingElement = document.getElementById('loading');
+            const errorElement = document.getElementById('error');
+            const contentElement = document.getElementById('content');
+
+            try {
+                // Fetch all necessary data
+                const [
+                    patientsResp, trialsResp, conditionsResp, medicationsResp,
+                    patientConditionsResp, patientMedicationsResp, trialReqsResp,
+                    usersResp, rolesResp
+                ] = await Promise.all([
+                    fetch(`${API_BASE}/patients`),
+                    fetch(`${API_BASE}/trials`),
+                    fetch(`${API_BASE}/conditions`),
+                    fetch(`${API_BASE}/medications`),
+                    fetch(`${API_BASE}/patient-conditions`),
+                    fetch(`${API_BASE}/patient-medications`),
+                    fetch(`${API_BASE}/trial-requirements`),
+                    fetch(`${API_BASE}/users`).catch(() => ({ok: true, json: async () => []})),
+                    fetch(`${API_BASE}/roles`).catch(() => ({ok: true, json: async () => []}))
+                ]);
+
+                const patients = await patientsResp.json();
+                const trials = await trialsResp.json();
+                const conditions = await conditionsResp.json();
+                const medications = await medicationsResp.json();
+                const patientConditions = patientConditionsResp.ok ? await patientConditionsResp.json() : [];
+                const patientMedications = patientMedicationsResp.ok ? await patientMedicationsResp.json() : [];
+                const trialReqs = trialReqsResp.ok ? await trialReqsResp.json() : [];
+                const users = await usersResp.json();
+                const roles = await rolesResp.json();
+
+                // Generate reports
+                displaySystemOverview(patients, trials, conditions, medications, users, roles);
+                displayPatientTrialMatching(patients, trials, patientConditions, trialReqs);
+                displayConditionDistribution(conditions, patientConditions, patients, trialReqs);
+                displayMedicationUsage(medications, patientMedications, patients);
+                displayTrialEnrollment(trials, patients, patientConditions, patientMedications, trialReqs);
+
+                loadingElement.style.display = 'none';
+                contentElement.style.display = 'block';
+
+            } catch (error) {
+                loadingElement.style.display = 'none';
+                errorElement.textContent = `Error: ${error.message}. Some API endpoints may be missing.`;
+                errorElement.style.display = 'block';
+            }
+        }
+
+        // UNION Query Simulation
+        function displaySystemOverview(patients, trials, conditions, medications, users, roles) {
+            const tbody = document.getElementById('system-overview-tbody');
+            tbody.innerHTML = '';
+
+            const data = [
+                { category: 'Total Patients', count: patients.length, status: 'Active' },
+                { category: 'Clinical Trials', count: trials.length, status: 'Ongoing' },
+                { category: 'Medical Conditions', count: conditions.length, status: 'Tracked' },
+                { category: 'Medications', count: medications.length, status: 'Available' },
+                { category: 'System Users', count: users.length, status: users.filter(u => u.isActive).length + ' Active' },
+                { category: 'User Roles', count: roles.length, status: 'Configured' }
+            ];
+
+            data.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${item.category}</strong></td>
+                    <td style="text-align: center; font-size: 18px;"><strong>${item.count}</strong></td>
+                    <td><span class="badge badge-info">${item.status}</span></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Complex JOIN Analysis
+        function displayPatientTrialMatching(patients, trials, patientConditions, trialReqs) {
+            const tbody = document.getElementById('matching-tbody');
+            tbody.innerHTML = '';
+
+            patients.slice(0, 10).forEach(patient => {
+                const age = calculateAge(patient.dateOfBirth);
+                
+                const patientConditionIds = patientConditions
+                    .filter(pc => pc.patientId === patient.patientId)
+                    .map(pc => pc.conditionId);
+
+                const eligibleTrials = trials.filter(trial => 
+                    age >= trial.minimumAge && age <= trial.maximumAge
+                );
+
+                const eligibilityPercent = trials.length > 0 
+                    ? ((eligibleTrials.length / trials.length) * 100).toFixed(0)
+                    : 0;
+
+                const conditionCount = patientConditionIds.length;
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${escapeHtml(patient.firstName)} ${escapeHtml(patient.lastName)}</td>
+                    <td>${age}</td>
+                    <td>${conditionCount} condition(s)</td>
+                    <td><strong>${eligibleTrials.length}</strong> / ${trials.length}</td>
+                    <td>
+                        <div style="background: #e0e0e0; border-radius: 3px; overflow: hidden;">
+                            <div style="background: #4CAF50; width: ${eligibilityPercent}%; padding: 2px 5px; color: white; font-size: 12px;">
+                                ${eligibilityPercent}%
+                            </div>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // GROUP BY with JOIN
+        function displayConditionDistribution(conditions, patientConditions, patients, trialReqs) {
+            const tbody = document.getElementById('condition-dist-tbody');
+            tbody.innerHTML = '';
+
+            const totalPatients = patients.length;
+
+            conditions.forEach(condition => {
+                const patientsWithCondition = patientConditions
+                    .filter(pc => pc.conditionId === condition.conditionId);
+                
+                const patientCount = patientsWithCondition.length;
+                const percentage = totalPatients > 0 
+                    ? ((patientCount / totalPatients) * 100).toFixed(1)
+                    : 0;
+
+                const relatedTrials = trialReqs
+                    .filter(tr => tr.conditionId === condition.conditionId)
+                    .length;
+
+                if (patientCount > 0) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td><strong>${escapeHtml(condition.name)}</strong></td>
+                        <td style="text-align: center;">${patientCount}</td>
+                        <td style="text-align: center;">${percentage}%</td>
+                        <td style="text-align: center;">${relatedTrials} trial(s)</td>
+                    `;
+                    tbody.appendChild(row);
+                }
+            });
+        }
+
+        // ORDER BY with ranking
+        function displayMedicationUsage(medications, patientMedications, patients) {
+            const tbody = document.getElementById('medication-usage-tbody');
+            tbody.innerHTML = '';
+
+            const medicationStats = medications.map(med => {
+                const activePatients = patientMedications
+                    .filter(pm => pm.medicationId === med.medicationId)
+                    .length;
+                
+                return { ...med, activePatients };
+            });
+
+            medicationStats
+                .sort((a, b) => b.activePatients - a.activePatients)
+                .slice(0, 10)
+                .forEach((med, index) => {
+                    const trend = med.activePatients > 3 ? 'High' : 
+                                 med.activePatients > 1 ? 'Medium' : 'Low';
+
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td style="text-align: center;"><strong>#${index + 1}</strong></td>
+                        <td><strong>${escapeHtml(med.name)}</strong></td>
+                        <td>${escapeHtml(med.dosage || 'N/A')}</td>
+                        <td style="text-align: center;">${med.activePatients}</td>
+                        <td>${trend}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+        }
+
+        // Complex calculated fields
+        function displayTrialEnrollment(trials, patients, patientConditions, patientMedications, trialReqs) {
+            const tbody = document.getElementById('trial-enrollment-tbody');
+            tbody.innerHTML = '';
+
+            trials.forEach(trial => {
+                const eligibleByAge = patients.filter(p => {
+                    const age = calculateAge(p.dateOfBirth);
+                    return age >= trial.minimumAge && age <= trial.maximumAge;
+                });
+
+                const requiredConditions = trialReqs
+                    .filter(tr => tr.trialId === trial.trialId && tr.conditionId)
+                    .map(tr => tr.conditionId);
+
+                let withCondition = 0;
+                if (requiredConditions.length > 0) {
+                    withCondition = eligibleByAge.filter(p => {
+                        const patientConditionIds = patientConditions
+                            .filter(pc => pc.patientId === p.patientId)
+                            .map(pc => pc.conditionId);
+                        return requiredConditions.some(rc => patientConditionIds.includes(rc));
+                    }).length;
+                } else {
+                    withCondition = eligibleByAge.length;
+                }
+
+                const excludedMeds = trialReqs
+                    .filter(tr => tr.trialId === trial.trialId && tr.excludedMedicationId)
+                    .map(tr => tr.excludedMedicationId);
+
+                const withoutExcludedMeds = eligibleByAge.filter(p => {
+                    const patientMeds = patientMedications
+                        .filter(pm => pm.patientId === p.patientId)
+                        .map(pm => pm.medicationId);
+                    return !excludedMeds.some(em => patientMeds.includes(em));
+                }).length;
+
+                const status = eligibleByAge.length > 5 ? 'Good' : 
+                              eligibleByAge.length > 2 ? 'Fair' : 'Low';
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${escapeHtml(trial.title)}</strong></td>
+                    <td style="text-align: center;">${trial.minimumAge}-${trial.maximumAge}</td>
+                    <td style="text-align: center;"><strong>${eligibleByAge.length}</strong></td>
+                    <td style="text-align: center;">${withCondition}</td>
+                    <td style="text-align: center;">${withoutExcludedMeds}</td>
+                    <td>${status}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function calculateAge(dateOfBirth) {
+            const today = new Date();
+            const birthDate = new Date(dateOfBirth);
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const monthDiff = today.getMonth() - birthDate.getMonth();
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            return age;
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

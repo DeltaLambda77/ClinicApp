@@ -1,4 +1,6 @@
 <?php
+// add_patient.php
+
 include('connection.php');
 
 $message = '';
